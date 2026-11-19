@@ -1,0 +1,114 @@
+{
+  "targets": [
+    {
+      "id": "ironwood-pod",
+      "connection": {
+        "type": "k8s",
+        "context": "REPLACE_CONTEXT",
+        "namespace": "inference",
+        "pod": "REPLACE_POD",
+        "container": "vllm",
+        "python": "python3"
+      },
+      "hardware": "Ironwood v7",
+      "backend": "REPLACE_TPU_BACKEND",
+      "model_id": "REPLACE_MODEL_ID",
+      "revision": "REPLACE_CHECKPOINT_COMMIT",
+      "served_name": "REPLACE_API_MODEL_NAME",
+      "model_path": "/models/checkpoint",
+      "tokenizer_path": "/models/checkpoint",
+      "tokenizer_revision": "REPLACE_TOKENIZER_COMMIT",
+      "dtype": "bfloat16",
+      "tp": 1,
+      "dp": 1,
+      "devices": 1,
+      "server_build": "REPLACE_SERVER_IMAGE_OR_VLLM_VERSION",
+      "quantization": "none",
+      "fixed_options": "REPLACE_KV_DTYPE_CACHE_BUDGET_PREFIX_CACHE_CHUNKED_PREFILL_COMPILATION",
+      "server_args": [],
+      "url": "http://127.0.0.1:8000",
+      "interval": 2,
+      "settings": [
+        {
+          "id": "baseline",
+          "max_num_seqs": 64,
+          "max_num_batched_tokens": 1024,
+          "max_model_len": 8192
+        },
+        {
+          "id": "tokens4096",
+          "max_num_seqs": 64,
+          "max_num_batched_tokens": 4096,
+          "max_model_len": 8192
+        },
+        {
+          "id": "seqs256",
+          "max_num_seqs": 256,
+          "max_num_batched_tokens": 4096,
+          "max_model_len": 8192
+        }
+      ]
+    },
+    {
+      "id": "h200-vm",
+      "connection": {
+        "type": "ssh",
+        "host": "h200-bench",
+        "python": "/opt/vllm/bin/python"
+      },
+      "hardware": "H200",
+      "backend": "CUDA",
+      "model_id": "REPLACE_MODEL_ID",
+      "revision": "REPLACE_CHECKPOINT_COMMIT",
+      "served_name": "REPLACE_API_MODEL_NAME",
+      "model_path": "/models/checkpoint",
+      "tokenizer_path": "/models/checkpoint",
+      "tokenizer_revision": "REPLACE_TOKENIZER_COMMIT",
+      "dtype": "bfloat16",
+      "tp": 1,
+      "dp": 1,
+      "devices": 1,
+      "server_build": "REPLACE_SERVER_IMAGE_OR_VLLM_VERSION",
+      "quantization": "none",
+      "fixed_options": "REPLACE_KV_DTYPE_CACHE_BUDGET_PREFIX_CACHE_CHUNKED_PREFILL_COMPILATION",
+      "server_args": [],
+      "url": "http://127.0.0.1:8000",
+      "interval": 2,
+      "settings": [
+        {
+          "id": "baseline",
+          "max_num_seqs": 64,
+          "max_num_batched_tokens": 1024,
+          "max_model_len": 8192
+        },
+        {
+          "id": "tokens4096",
+          "max_num_seqs": 64,
+          "max_num_batched_tokens": 4096,
+          "max_model_len": 8192
+        },
+        {
+          "id": "seqs256",
+          "max_num_seqs": 256,
+          "max_num_batched_tokens": 4096,
+          "max_model_len": 8192
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "short-fixed",
+      "input_tokens": 512,
+      "output_tokens": 128,
+      "num_prompts": 64,
+      "concurrency": [
+        8,
+        32
+      ],
+      "repeats": 2,
+      "warmup_prompts": 8,
+      "seed": 7
+    }
+  ]
+}

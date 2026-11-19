@@ -1,0 +1,16 @@
+{
+  "run_id": "demo-001",
+  "scenario": "fixed-demo",
+  "model": "demo@rev1",
+  "dtype": "bfloat16",
+  "environment": "synthetic",
+  "input_tokens": 512,
+  "output_tokens": 128,
+  "concurrency": 8,
+  "max_num_seqs": 64,
+  "max_num_batched_tokens": 1024,
+  "max_model_len": 8192,
+  "quality": "unknown",
+  "data_kind": "demo",
+  "num_prompts": 64
+}

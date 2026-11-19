@@ -1,0 +1,10 @@
+{
+  "num_prompts": 64,
+  "completed": 64,
+  "failed": 0,
+  "max_concurrency": 8,
+  "p95_ttft_ms": 210,
+  "p95_itl_ms": 32,
+  "output_throughput": 890,
+  "request_throughput": 6.95
+}

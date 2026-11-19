@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inference Lab · vLLM 추론 성능 분석</title>
+<style>
+:root{color-scheme:light;--paper:#f5f7fa;--card:#fff;--ink:#14283c;--muted:#506479;--soft:#dae2eb;--teal:#007965;--sea:#e5f5ef;--gold:#a96612;--nav:#10283a;--mono:"SFMono-Regular",Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.58 "Inter",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;word-break:keep-all;overflow-wrap:anywhere}
+button,input,select{font:inherit}button,select{cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #e59835;outline-offset:3px}button{border:1px solid var(--soft);border-radius:8px;background:white;color:var(--ink);padding:8px 13px;font-weight:650}button:hover{background:#edf3f7}button.primary{background:var(--teal);color:white;border-color:var(--teal)}button.primary:hover{background:#006753}button:disabled{opacity:.55;cursor:default}select,input[type=number],#remote input{border:1px solid #c4cfda;border-radius:7px;background:white;color:var(--ink);padding:8px 10px;max-width:100%;min-width:0;width:100%}input[type=checkbox]{width:17px;height:17px;accent-color:var(--teal)}a{color:#006859}h1,h2,h3,p{margin:0}h1{font-size:clamp(1.75rem,3vw,2.45rem);line-height:1.22;letter-spacing:-.055em}h2{font-size:1.17rem;letter-spacing:-.035em}h3{font-size:1rem}small,.hint{color:var(--muted);font-size:.84rem}.mono,code,pre{font-family:var(--mono)}code{font-size:.89em}button,select,input,.stat strong,td{font-variant-numeric:tabular-nums}
+.top{background:var(--nav);color:white}.navwrap,main{max-width:1440px;margin:auto;padding:0 clamp(16px,3.2vw,50px)}.navwrap{min-height:65px;display:flex;align-items:center;gap:38px}.brand{font-size:20px;font-weight:750;letter-spacing:-.06em;display:flex;align-items:center;gap:10px;white-space:nowrap}.mark{display:inline-flex;height:27px;align-items:flex-end;gap:3px;transform:skew(-10deg)}.mark i{width:5px;background:#6cd9bb;border-radius:2px}.mark i:nth-child(1){height:9px}.mark i:nth-child(2){height:18px}.mark i:nth-child(3){height:25px}.nav{display:flex;gap:4px;align-items:stretch;align-self:stretch}.nav button{background:transparent;color:#b9cbd6;border:0;border-radius:0;border-bottom:3px solid transparent;padding:12px 15px}.nav button[aria-pressed=true]{color:white;border-bottom-color:#5cddbd}.local{margin-left:auto;color:#bbd8d4;font-size:.8rem;white-space:nowrap}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#38ba9c;margin-right:6px}
+main{padding-bottom:40px}.mast{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:28px 0 22px}.mast p,.sub{margin-top:5px;color:var(--muted)}.actions,.inline{display:flex;align-items:center;flex-wrap:wrap;gap:9px}.statuspill{background:#fff2d8;color:#754b09;font-size:.78rem;font-weight:700;padding:4px 9px;border-radius:6px}.statuspill.real{background:var(--sea);color:#005e4e}
+.board{display:grid;grid-template-columns:minmax(232px,272px) minmax(0,1fr);gap:16px;align-items:start}.box{background:white;border:1px solid var(--soft);border-radius:13px;box-shadow:0 2px 6px #213b4c06;padding:19px 21px}.rail{display:grid;gap:13px}.rail h2{margin-bottom:1px}.field{display:grid;gap:5px;color:#334d60;font-size:.84rem;font-weight:650}.field select,.field input{font-weight:500}.pair{display:grid;gap:9px;grid-template-columns:1fr 1fr}.check{display:flex;gap:7px;align-items:center;font-size:.87rem}.rule{margin:2px 0 0;border:0;border-top:1px solid var(--soft)}.content{min-width:0;display:grid;gap:14px}.summary{background:var(--nav);color:white;border-radius:13px;display:grid;grid-template-columns:1.2fr 1fr 1fr;padding:19px 22px;gap:12px}.stat{padding-left:18px;border-left:1px solid #476070}.stat:first-child{padding-left:0;border:0}.stat span,.stat small{color:#c2d1d9;display:block}.stat span{font-size:.8rem}.stat strong{display:block;font-size:clamp(1.25rem,2.1vw,1.8rem);line-height:1.25;margin:5px 0;color:#fff;letter-spacing:-.04em}.stat:first-child strong{color:#86ebd0}.stat small{font-size:.73rem}
+.heading{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.heading select{width:auto;font-size:.82rem}.figure{margin:12px 0 0}.plot{height:290px;position:relative}.plot canvas{display:block;width:100%;height:100%}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.77rem;color:var(--muted);margin-top:6px}.sw{display:inline-block;vertical-align:middle;width:9px;height:9px;border-radius:50%;margin-right:5px;background:#128675}.sw.dim{background:#a4b1bf}.sw.win{background:#16364b;outline:2px solid #50bda3;outline-offset:1px}.sw.line{height:2px;width:17px;border-radius:0;background:#128675}.sw.dash{height:0;width:16px;border-top:2px dashed #ae711b;border-radius:0}.plotnote{font-size:.84rem;color:var(--muted);margin-top:7px;min-height:1.5em}.tablewrap{overflow:auto;margin-top:10px;max-height:460px}table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:.85rem;text-align:right}th{background:#f2f5f8;color:#4d6172;position:sticky;top:0;z-index:1;text-align:inherit;font-weight:650}th,td{padding:9px 10px;border-bottom:1px solid #e5eaf0}td:first-child,th:first-child{text-align:left}tbody tr.recommend{background:#eff9f5}.tag{font-size:.77rem;color:#00644f}.no{color:#80591b}.subbox{border-left:3px solid #319982;background:#eff8f5;padding:9px 13px;margin-top:12px;border-radius:4px;font-size:.9rem}.micro{margin:8px 0;color:var(--muted);font-size:.83rem}.notice{background:#fff3d9;color:#65420e;border:1px solid #f1d8a1;border-radius:8px;padding:9px 13px;margin:0 0 15px;white-space:pre-line}.two{display:grid;grid-template-columns:minmax(245px,.72fr) minmax(0,1.7fr);gap:16px}.stack{display:grid;gap:14px}.guide{max-width:1000px;display:grid;gap:14px}.guide ul,.guide ol{margin:7px 0;padding-left:22px}.guide li{margin:5px 0}.guide pre{font-size:.8rem;overflow:auto;word-break:normal;white-space:pre;background:var(--nav);color:#e9f5f2;border-radius:9px;padding:14px}.guide td,.guide th{text-align:left;white-space:normal}.guide code{overflow-wrap:anywhere}.guide p{margin-top:7px}.foot{color:var(--muted);font-size:.78rem;margin:20px 0}.onlysr{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}.chartTip{position:absolute;pointer-events:none;background:#11293cf2;color:white;border-radius:6px;padding:6px 10px;font-size:.76rem;max-width:245px;white-space:pre-line;z-index:2}.rfval{font-size:1.4rem;font-weight:bold;color:#006d58}.msg{color:#854c00}details>summary{cursor:pointer;font-weight:650} [hidden]{display:none!important}
+@media(max-width:900px){.navwrap{gap:18px}.local{display:none}.board{grid-template-columns:215px minmax(0,1fr)}.box{padding:15px}.summary{padding:15px;gap:7px}.stat{padding-left:9px}.mast{align-items:flex-start}}
+@media(max-width:720px){.navwrap{gap:8px;flex-wrap:wrap;padding-top:8px}.brand{font-size:18px}.nav button{padding:9px 8px;font-size:.82rem}.mast{display:grid;margin:22px 0 14px;gap:12px}.board,.two{grid-template-columns:1fr}.rail{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.rail h2,.rail .wide,.rail hr{grid-column:1/-1}.summary{grid-template-columns:1.15fr 1fr 1fr}.stat strong{font-size:1.15rem}.plot{height:250px}.tablewrap{max-height:360px}.actions{gap:6px}.sub{font-size:.87rem}}
+</style></head><body>
+<header class="top"><div class="navwrap"><div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>Inference Lab</div><nav class="nav" aria-label="분석 화면"><button data-tab="service" aria-pressed="true">서빙 분석</button><button data-tab="kernel" aria-pressed="false">커널 Roofline</button><button data-tab="remote" aria-pressed="false">원격 수집</button><button data-tab="guide" aria-pressed="false">데이터 가이드</button></nav><span class="local"><i class="dot"></i>로컬 분석</span></div></header>
+<main><div class="mast"><div><h1 id="title">vLLM 추론 성능 분석</h1><p id="subtitle">같은 부하에서 지연 목표를 만족하는 서버 설정을 찾습니다.</p></div><div class="actions" id="dataActions"><span id="source" class="statuspill">예시 데이터</span><button id="upload" class="primary">측정 파일 열기</button><input id="files" type="file" accept=".csv,.json" multiple hidden></div></div>
+<div id="notice" role="status" class="notice" hidden></div>
+<section id="service"><div class="board"><aside class="box rail"><h2>분석 조건</h2>
+<label class="field wide">워크로드<select id="workload"></select></label><label class="field wide">실행 환경<select id="env"></select></label><label class="field">동시 요청 수<select id="conc"></select></label><label class="field">최대화할 처리량<select id="metric"><option value="out">출력 토큰/초</option><option value="req">요청/초</option></select></label><hr class="rule"><h3 class="wide">서비스 지연 목표</h3>
+<div class="pair wide"><label class="field">p95 TTFT (ms)<input id="limT" type="number" min="0.001" step="any" value="1500" placeholder="제한 없음"></label><label class="field">p95 ITL (ms)<input id="limI" type="number" min="0.001" step="any" value="50" placeholder="제한 없음"></label></div>
+<label class="check wide"><input id="parity" type="checkbox" checked>정합성 통과 설정만 추천</label><p class="hint wide">TTFT는 첫 토큰까지의 시간, ITL은 연속 출력 토큰 사이의 간격입니다. p95는 관측값의 95번째 백분위수입니다. 초기 목표는 예시입니다. 일괄 처리처럼 지연 제약이 없으면 해당 칸을 비우세요.</p><hr class="rule"><button id="export" class="wide">현재 분석 CSV 저장</button></aside>
+<div class="content"><div id="summary" class="summary" aria-live="polite"></div>
+<section class="box"><div class="heading"><div><h2>지연과 처리량</h2><p class="hint">점 하나는 서버 설정 하나를 나타냅니다.</p></div><label class="field">가로축<select id="axis"><option value="itl">p95 ITL (ms)</option><option value="ttft">p95 TTFT (ms)</option><option value="inverse">1 / p95 ITL (s⁻¹)</option></select></label></div>
+<figure class="figure"><div class="plot"><canvas id="scatter" role="img" aria-label="설정별 지연과 처리량 산점도. 수치는 아래 설정별 측정 결과 표에 있습니다."></canvas><span class="chartTip" id="tip" hidden></span></div>
+<figcaption class="legend"><span><i class="sw win"></i>추천 설정</span><span><i class="sw"></i>조건 충족</span><span><i class="sw dim"></i>제외</span><span><i class="sw line"></i>두 축의 파레토 경계</span><span><i class="sw dash"></i>지연 목표</span></figcaption></figure><p class="plotnote" id="plotnote"></p></section>
+<section class="box"><div class="heading"><div><h2>파라미터를 바꾼 효과</h2><p class="hint">기준 설정에서 한 항목만 다른 실험을 비교합니다.</p></div></div><div class="inline" style="margin-top:10px"><label class="field">비교 기준<select id="anchor"></select></label><label class="field">변경 항목<select id="factor"><option value="seq">max_num_seqs</option><option value="budget">max_num_batched_tokens</option><option value="len">max_model_len</option></select></label></div><div id="sensitivity"></div></section>
+<section class="box"><h2>같은 설정에서 동시 요청 수를 늘리면</h2><p class="hint">위에서 선택한 비교 기준을 고정하고 클라이언트 부하만 바꾼 결과입니다.</p><div id="loadsweep"></div></section>
+
+<section class="box"><div class="heading"><h2>설정별 측정 결과</h2><span id="counts" class="hint"></span></div><div class="tablewrap"><table><thead id="resultHead"></thead><tbody id="resultBody"></tbody></table></div><p class="micro">처리량은 반복 실행의 중앙값, 지연은 실행별 p95 중 가장 큰 값입니다. 실패한 반복이 한 번이라도 있으면 해당 설정을 제외합니다.</p></section>
+</div></div></section>
+<section id="kernel" hidden><div class="two"><aside class="box stack"><h2>같은 커널 구간의 계측값</h2><label class="field">최대 연산 성능 (TFLOP/s)<input id="peak" type="number" step="any" value="200" min="0"></label><label class="field">HBM 대역폭 (TB/s)<input id="band" type="number" step="any" value="2" min="0"></label><hr class="rule"><label class="field">연산량 (GFLOP)<input id="ops" type="number" step="any" value="60" min="0"></label><label class="field">HBM 읽기 + 쓰기 (GB)<input id="bytes" type="number" step="any" value="1.2" min="0"></label><label class="field">커널 실행 시간 (ms)<input id="ms" type="number" step="any" value="1" min="0"></label><p class="hint">초깃값은 계산 예시입니다. 칩 수·정밀도·연산 종류와 메모리 계층이 같은 프로파일 값으로 교체하세요. 단위는 십진수입니다.</p></aside><div class="content"><section class="box"><h2>연산 집약도와 성능 상한</h2><div class="plot" style="height:330px"><canvas id="roof" role="img" aria-label="로그 축 하드웨어 Roofline. 수치와 해석은 그래프 아래에 있습니다."></canvas></div><div id="kernelResult" aria-live="polite"></div></section><section class="box"><h2>측정값을 읽는 법</h2><p class="sub">연산 집약도는 HBM에서 1바이트를 읽거나 쓸 때 수행한 연산 수입니다. 기울어진 구간에서는 HBM 대역폭이, 수평 구간에서는 최대 연산 성능이 이론 상한을 정합니다. 측정점과 상한의 차이는 통신, 동기화, 커널 실행 효율 등을 프로파일에서 확인할 단서입니다.</p><p class="micro"><a href="https://docs.cloud.google.com/docs/ai-ml/accelerator-performance-benchmarking" target="_blank" rel="noreferrer">Google Cloud Roofline 설명</a></p></section></div></div></section>
+
+<section id="remote" class="guide" hidden>
+<section class="box"><h2>실행 중인 Pod 관측</h2>
+<p>PC 터미널에서 Pod 이름을 확인하고 30초 동안 기존 요청을 관측하세요. 컨테이너에 프로그램을 설치하거나 모델을 재기동할 필요가 없습니다.</p>
+<div class="pair"><label class="field">네임스페이스<input id="kubeNs" value="inference" spellcheck="false"></label><label class="field">Pod 이름<input id="kubePod" placeholder="kubectl get pods의 NAME" spellcheck="false"></label></div>
+<details style="margin-top:12px"><summary>컨테이너·포트·로그 전용 옵션</summary>
+<div class="pair"><label class="field">컨테이너 이름<input id="kubeContainer" placeholder="한 개면 생략" spellcheck="false"></label><label class="field">vLLM 포트<input id="kubePort" type="number" min="1" max="65535" value="8000"></label></div>
+<label class="check"><input id="kubeLogsOnly" type="checkbox">컨테이너 로그만 보기</label></details>
+<pre id="kubeCommand" aria-live="polite"></pre>
+<p class="hint">위 명령을 프로젝트 폴더에서 실행하세요. 컨테이너가 여러 개면 모델 서버의 컨테이너 이름을 입력합니다.</p>
+<button type="button" id="kubeOpen" class="primary">Pod 관측 파일 열기</button><input type="file" id="kubeFile" accept=".json" hidden>
+<p class="hint">명령이 마지막에 출력한 kubectl-summary.json을 선택하세요. 연습하려면 examples/kubectl-summary.json을 열어 보세요.</p>
+<div id="kubeResult" aria-live="polite"></div></section>
+<section class="box"><h2>Pod·VM에서 벤치마크 또는 원격 수집기 실행</h2><p>브라우저는 결과를 분석합니다. 아래 명령은 소스 폴더의 터미널에서 실행하며, 모델과 토크나이저는 선택한 원격 장비에서 사용합니다.</p>
+<div class="pair"><label class="field">실행 위치<select id="rtKind"><option value="pod">Kubernetes Pod</option><option value="vm">SSH VM</option></select></label><label class="field">수집 방식<select id="rtMode"><option value="collect">기존 모델로 벤치 실행</option><option value="observe">현재 부하 관측만</option><option value="launch">전용 장비에서 모델 신규 기동</option></select></label></div>
+<div class="pair" style="margin-top:12px"><label class="field">설정 파일의 대상 ID<input id="rtTarget" value="ironwood-pod" maxlength="80"></label><label class="field">설정 ID<input id="rtSetting" value="baseline" maxlength="80"></label></div>
+<pre id="rtCmd"></pre><p id="rtInfo"></p><p>처음에는 <code>configs/targets.example.json</code>을 <code>configs/targets.json</code>으로 복사하세요. Pod는 context·namespace·Pod·container, VM은 SSH 별칭을 채웁니다. 엔진 버전과 설정 상한은 배포 명세에서 확인합니다.</p></section>
+<section class="box"><h2>결과 불러오기</h2><p>회수가 끝나면 PC의 <code>results/대상ID-작업ID/runs.csv</code>를 <strong>서빙 분석 → 측정 파일 열기</strong>로 선택하세요. 연결이 끊긴 경우 <code>python3 remote.py fetch results/대상ID-작업ID/receipt.json</code>으로 같은 작업을 회수할 수 있습니다.</p><p>관측 모드는 UTC 시각과 엔진 라벨이 있는 <code>metrics.jsonl.gz</code>를 생성합니다. 커널 Roofline에는 별도로 계측한 FLOP·HBM 바이트·시간이 필요합니다.</p></section></section>
+<section id="guide" class="guide" hidden>
+<section class="box"><h2>측정 파일 준비</h2><ol><li>같은 모델 리비전·토크나이저·정밀도·데이터·길이·부하 패턴을 사용합니다. 데이터셋, 시드, 캐시 정책, 요청률, 워밍업 조건이 달라지면 워크로드 이름을 구분하세요.</li><li>GPU 또는 TPU에서 서버 설정을 바꿔 재기동하고 워밍업한 뒤 같은 시험을 반복합니다. <code>environment</code>에 장비·수량·백엔드 버전·TP/DP 등 고정한 서버 조건을 기입합니다.</li><li>아래 CSV 양식에 실행 1회당 한 행을 입력하거나 아래 형식의 vLLM JSON을 준비합니다. 함께 분석할 파일은 한 번에 선택하세요. 새로 열면 현재 데이터 전체를 교체합니다.</li></ol><div class="actions"><button id="template">빈 CSV 양식 받기</button><button id="sampleCSV">예시 CSV 받기</button><button id="restore">예시로 돌아가기</button></div></section>
+<section class="box"><h2>CSV 열과 단위</h2><div class="tablewrap"><table><thead><tr><th>열 이름</th><th>입력 내용</th></tr></thead><tbody>
+<tr><td><code>run_id, scenario, model, dtype</code></td><td>고유 실행 ID, 워크로드 이름, 모델과 리비전, 정밀도. 같은 실행을 중복으로 합산하지 않도록 ID는 파일 전체에서 유일해야 합니다.</td></tr>
+<tr><td><code>environment</code></td><td>예: H100×8 · vLLM 버전 · TP8/DP1. H200, H100, Ironwood, 서로 다른 칩 수와 소프트웨어 구성을 개별 이름으로 기록합니다.</td></tr>
+<tr><td><code>input_tokens, output_tokens, concurrency</code></td><td>시나리오의 요청당 입력·출력 길이와 클라이언트 동시 요청 상한. 가변 길이는 대표 길이와 분포 식별자를 함께 기록합니다. 실제 스케줄러 배치 크기는 별도입니다.</td></tr>
+<tr><td><code>max_num_seqs, max_num_batched_tokens, max_model_len</code></td><td>서버에서 확인한 스텝당 시퀀스 상한, 스텝당 전체 토큰 예산, 요청당 문맥 상한입니다.</td></tr>
+<tr><td><code>status, quality</code></td><td>실행 결과 <code>ok / error / oom</code>. 요청 실패가 한 건이라도 있으면 error입니다. 별도의 출력 정합성 평가 결과는 <code>pass / fail / unknown</code>입니다. 미입력은 unknown으로 처리합니다.</td></tr>
+<tr><td><code>p95_ttft_ms, p95_itl_ms, output_throughput</code></td><td>각각 첫 토큰 지연 p95(ms), 연속 출력 토큰 간 지연 p95(ms), 초당 출력 토큰 수입니다. 정상 행은 양수만 허용합니다. 토큰 1개만 생성해 ITL이 정의되지 않는 시험은 지원 범위 밖입니다. 실패 행에는 성능 칸을 비워도 됩니다.</td></tr>
+<tr><td><code>request_throughput</code></td><td>선택 항목. 초당 완료 요청 수입니다. 누락된 반복이 있으면 요청/초 기준 추천에서 해당 설정을 제외합니다.</td></tr>
+<tr><td><code>data_kind</code></td><td><code>demo / measured</code>. 생략 시 measured입니다. 예시 CSV를 수정해 실험값을 넣었다면 measured로 바꾸세요. 두 종류의 혼합 입력은 차단합니다.</td></tr>
+</tbody></table></div></section>
+<section class="box"><h2>vLLM 결과 JSON 사용</h2><p>실행 중인 서버를 대상으로 아래 예시의 모델명·메타데이터·동시성·요청 수를 시험 조건에 맞춥니다. 서버 상한은 별도로 기동한 엔진의 실제 값과 일치해야 합니다. <code>run_id</code>는 매 실행 바꿉니다.</p>
+<pre id="cmd"></pre><p>단일 객체, 객체 배열, 여러 JSON 파일을 지원합니다. <code>output_throughput</code>과 p95 TTFT·ITL을 읽고, <code>failed</code> 또는 <code>completed / num_prompts</code>로 실패를 판정합니다. 누락된 p95를 p99로 대체하지 않습니다. JSON 구조가 다른 버전은 위 CSV 양식을 사용하세요.</p><p><a href="https://docs.vllm.ai/en/stable/cli/bench/serve/" target="_blank" rel="noreferrer">vLLM bench serve 옵션</a> · <a href="https://docs.vllm.ai/en/stable/cli/serve/" target="_blank" rel="noreferrer">vLLM 서버 설정</a></p></section>
+<section class="box"><h2>추천과 재시험 기준</h2><p>같은 워크로드·환경·동시성에서 실행에 성공하고 SLO를 충족한 설정 중 선택한 처리량이 가장 큰 값을 고릅니다. 동률이면 ITL, TTFT, 시퀀스 상한, 토큰 예산, 문맥 상한이 작은 순입니다. 정합성 실패는 항상 제외하며, 체크를 해제하면 미검증 결과를 포함합니다. TTFT와 ITL의 p95를 각각 검사하므로 두 기준을 동시에 만족한 요청 비율은 별도 요청 로그로 계산해야 합니다.</p><p>파레토 경계는 추천 조건을 충족한 설정 중 그래프의 두 지표를 동시에 개선할 수 없는 점들을 잇습니다. 선 사이의 설정은 미측정 구간입니다. 설정을 바꿔도 처리량 증가가 작으면 서버의 실행·대기 요청 수, KV 캐시 사용률, 재계산과 컴파일 로그를 같은 시간대에서 확인하세요.</p><p>11월 18일 회의에서 언급한 시퀀스 상한 4,096과 토큰 예산 8,192~16,384는 재시험 후보입니다. 이 화면의 예시 수치는 가상의 반복 측정값이며 장비 간 성능 비교 자료로 사용할 수 없습니다.</p></section>
+</section><div class="foot">Inference Lab · vLLM Roofline Workbench</div></main><script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const fields = ['run_id','scenario','model','dtype','environment','input_tokens','output_tokens','concurrency','max_num_seqs','max_num_batched_tokens','max_model_len','status','quality','p95_ttft_ms','p95_itl_ms','output_throughput','request_throughput','data_kind'];
+const params = {seq:'max_num_seqs',budget:'max_num_batched_tokens',len:'max_model_len'};
+const f = (v, digits=1) => Number.isFinite(v) ? v.toLocaleString('ko-KR',{maximumFractionDigits:digits}) : '—';
+const median = values => {
+  if (!values.length) return null;
+  const ns = [...values].sort((a,b)=>a-b), m=Math.floor(ns.length/2);
+  return ns.length%2 ? ns[m] : ns[m-1]/2+ns[m]/2;
+};
+const sameKey = (row, names) => JSON.stringify(names.map(k=>row[k]));
+const workKey = r => sameKey(r,['scenario','model','dtype','input_tokens','output_tokens']);
+const configKey = r => sameKey(r,Object.values(params));
+const missing = v => v == null || (typeof v === 'string' && !v.trim());
+const workLabel = r => r.scenario+' · '+r.model+' · '+r.dtype+' · '+f(r.input_tokens)+' → '+f(r.output_tokens);
+function makeDemo() {
+  // 표 안의 수치는 기능 설명용 가상값이다. 실측 파일과 같은 계산 경로를 거친다.
+  const points=[
+    [64,1024,690,24,2100],[64,4096,780,27,1840],[64,8192,805,30,1760],
+    [256,1024,1020,32,1390],[256,4096,1340,36,1170],[256,8192,1440,41,1080],[256,16384,1460,51,1020],
+    [1024,1024,1230,35,1400],[1024,4096,1540,40,1050],[1024,8192,1720,46,960],
+    [1024,16384,1780,59,915],[4096,8192,1740,53,1020],[4096,16384,0,0,0]
+  ];
+  const rows=[];
+  for(const c of [1024,512,256,128,64]) for(const [s,b,out,it,tt] of points) for(const i of [1,2]) {
+    const load=c/1024, oom=!out, scale=0.35+0.65*Math.sqrt(load), rand=i===1?.99:1.01;
+    rows.push({run_id:'demo-'+[c,s,b,i].join('-'),scenario:'짧은 질의 예시',model:'Gemma 계열 (가상)',dtype:'BF16',
+      environment:'가상 TPU · 8칩 · TP8/DP1',input_tokens:1024,output_tokens:500,concurrency:c,
+      max_num_seqs:s,max_num_batched_tokens:b,max_model_len:8192,status:oom?'oom':'ok',quality:oom?'unknown':'pass',
+      p95_ttft_ms:oom?null:Math.round(tt*rand*(.23+.77*load)),p95_itl_ms:oom?null:Math.round(it*rand*(.7+.3*load)*10)/10,
+      output_throughput:oom?null:Math.round(out*rand*scale),request_throughput:oom?null:out*rand*scale/500,data_kind:'demo'});
+  }
+  return rows;
+}
+function csvRead(raw) {
+  const src=raw.replace(/^\uFEFF/,''); const grid=[];
+  let row=[],cell='',quoted=false,closed=false;
+  const finish=()=>{row.push(cell);cell='';closed=false};
+  const line=()=>{finish();if(row.some(x=>x.trim()))grid.push(row);row=[]};
+  for(let i=0;i<src.length;i++){
+    const ch=src[i];
+    if(quoted){
+      if(ch!=='"'){cell+=ch;continue}
+      if(src[i+1]==='"'){cell+='"';i++;continue}
+      quoted=false;closed=true;continue;
+    }
+    if(ch===','){finish();continue}
+    if(ch==='\r'||ch==='\n'){if(ch==='\r'&&src[i+1]==='\n')i++;line();continue}
+    if(closed)throw Error('CSV 닫는 따옴표 뒤에 잘못된 문자가 있습니다.');
+    if(ch==='"'){if(cell)throw Error('CSV 필드 안 따옴표를 확인하세요.');quoted=true;continue}
+    cell+=ch;
+  }
+  if(quoted)throw Error('CSV 따옴표가 닫히지 않았습니다.');
+  line();if(grid.length<2)throw Error('헤더와 측정 행이 필요합니다.');
+  const headers=grid.shift().map(x=>x.trim());
+  if(new Set(headers).size!==headers.length||headers.includes(''))throw Error('CSV 헤더의 빈 이름 또는 중복을 확인하세요.');
+  return grid.map((r,i)=>{if(r.length!==headers.length)throw Error('CSV '+(i+2)+'행의 열 수를 확인하세요.');return Object.fromEntries(headers.map((k,j)=>[k,r[j]]))});
+}
+function jsonRead(raw){
+  const src=raw.replace(/^\uFEFF/,'');
+  // 일부 Python 벤치마크 버전은 무제한 요청률을 따옴표 없는 Infinity로 기록한다.
+  const clean=src.replace(/"(?:\\.|[^"\\])*"|(-?Infinity|NaN)\b/g,(s,token)=>token?'null':s);
+  const obj=JSON.parse(clean);return Array.isArray(obj)?obj:[obj];
+}
+function normalize(record,index,name){
+  if(!record||typeof record!=='object'||Array.isArray(record))throw Error(name+' '+index+'번째 항목은 측정 객체여야 합니다.');
+  const meta=record.metadata;
+  const flat=Array.isArray(meta)?Object.fromEntries(meta.filter(s=>typeof s==='string'&&s.includes('=')).map(s=>[s.slice(0,s.indexOf('=')),s.slice(s.indexOf('=')+1)])):meta&&typeof meta==='object'?meta:{};
+  const r={...flat,...record}, prefix=name+' · '+index+'번째 측정';
+  function bad(msg){throw Error(prefix+' · '+msg)}
+  function str(k){if(typeof r[k]!=='string'||!r[k].trim())bad(k+' 텍스트가 필요합니다.');return r[k].trim()}
+  function num(k,v,{int=false,zero=false,optional=false}={}){
+    if(missing(v)){if(optional)return null;bad(k+' 값이 필요합니다.')}
+    if(typeof v!=='number'&&typeof v!=='string')bad(k+' 숫자 형식을 확인하세요.');
+    const n=Number(v);
+    if(!Number.isFinite(n)||(zero?n<0:n<=0)||(int&&!Number.isSafeInteger(n)))bad(k+' 값의 단위와 범위를 확인하세요.');
+    return n;
+  }
+  const a={};
+  for(const k of ['run_id','scenario','dtype','environment'])a[k]=str(k);
+  r.model=r.model||r.model_id;a.model=str('model');
+  r.concurrency=r.concurrency??r.max_concurrency;
+  for(const k of ['input_tokens','output_tokens','concurrency',...Object.values(params)])a[k]=num(k,r[k],{int:true});
+  const failed=num('failed',r.failed,{int:true,zero:true,optional:true});
+  const done=num('completed',r.completed,{int:true,zero:true,optional:true});
+  const planned=num('num_prompts',r.num_prompts,{int:true,optional:true});
+  let status=missing(r.status)?'':String(r.status).trim().toLowerCase();
+  if(status&&!['ok','error','oom'].includes(status))bad('status는 ok, error, oom 중 하나입니다.');
+  const incomplete=done!==null&&planned!==null&&done!==planned;
+  if(failed>0||done===0||incomplete)status=status==='oom'?'oom':'error';
+  if(!status&&(failed===0||(done!==null&&planned!==null)))status='ok';
+  if(!status)bad('status 또는 요청 성공·실패 건수가 필요합니다.');
+  a.status=status;a.quality=missing(r.quality)?'unknown':String(r.quality).trim().toLowerCase();
+  if(!['pass','fail','unknown'].includes(a.quality))bad('quality는 pass, fail, unknown 중 하나입니다.');
+  a.data_kind=missing(r.data_kind)?'measured':String(r.data_kind).trim().toLowerCase();
+  if(!['measured','demo'].includes(a.data_kind))bad('data_kind는 measured 또는 demo입니다.');
+  for(const k of ['p95_ttft_ms','p95_itl_ms','output_throughput','request_throughput']){
+    a[k]=status!=='ok'?null:num(k,r[k]??r[k.replace('p95_','p95.0_')],{optional:k==='request_throughput'});
+  }
+  return a;
+}
+function validateSet(rows){
+  if(!rows.length)throw Error('가져올 측정이 없습니다.');
+  const ids=new Set();for(const r of rows){if(ids.has(r.run_id))throw Error('중복 run_id: '+r.run_id);ids.add(r.run_id)}
+  if(new Set(rows.map(r=>r.data_kind)).size>1)throw Error('가상 데이터와 실측 데이터는 별도로 여세요.');
+  return rows;
+}
+function aggregate(rows){
+  const buckets=new Map();for(const r of rows){const k=configKey(r);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(r)}
+  return Array.from(buckets,([key,rr])=>{
+    const first=rr[0], good=rr.filter(r=>r.status==='ok'), allReq=good.length&&good.every(r=>r.request_throughput!==null);
+    const worst=k=>good.length?good.reduce((m,r)=>Math.max(m,r[k]),0):null;
+    return {key,seq:first.max_num_seqs,budget:first.max_num_batched_tokens,len:first.max_model_len,n:rr.length,
+      errors:rr.length-good.length,oom:rr.filter(r=>r.status==='oom').length,
+      quality:rr.some(r=>r.quality==='fail')?'fail':rr.every(r=>r.quality==='pass')?'pass':'unknown',
+      ttft:worst('p95_ttft_ms'),itl:worst('p95_itl_ms'),out:median(good.map(r=>r.output_throughput)),
+      req:allReq?median(good.map(r=>r.request_throughput)):null};
+  });
+}
+function reasons(r,policy){
+  const rs=[];
+  if(r.errors)rs.push((r.oom?'OOM 포함':'실행 실패')+' '+r.errors+'/'+r.n);
+  if(r.quality==='fail')rs.push('정합성 실패');
+  if(policy.parity&&r.quality==='unknown')rs.push('정합성 미확인');
+  if(r.ttft!==null&&r.ttft>policy.ttft)rs.push('TTFT 초과');
+  if(r.itl!==null&&r.itl>policy.itl)rs.push('ITL 초과');
+  if(r[policy.metric]===null&&!r.errors)rs.push('처리량 누락');
+  return rs;
+}
+function order(a,b,metric){return (b[metric]??-1)-(a[metric]??-1)||a.itl-b.itl||a.ttft-b.ttft||a.seq-b.seq||a.budget-b.budget||a.len-b.len}
+function selectRuns(configs,policy){
+  const all=configs.map(r=>({...r,reasons:reasons(r,policy)}));
+  const eligible=all.filter(r=>!r.reasons.length).sort((a,b)=>order(a,b,policy.metric));
+  all.sort((a,b)=>Boolean(a.reasons.length)-Boolean(b.reasons.length)||order(a,b,policy.metric));
+  return {all,eligible,best:eligible[0]??null};
+}
+function roofCalc(peak,band,ops,bytes,ms){
+  if(![peak,band,ops,bytes,ms].every(x=>Number.isFinite(x)&&x>0))return null;
+  const intensity=ops/bytes,actual=ops/ms,ridge=peak/band,ceiling=Math.min(peak,band*intensity),eff=100*actual/ceiling;
+  if(![intensity,actual,ridge,ceiling,eff].every(x=>Number.isFinite(x)&&x>0))return null;
+  return {intensity,actual,ridge,ceiling,eff};
+}
+
+function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e}
+function pick(id,entries,preferred){
+  const select=$(id),wanted=preferred??select.value;
+  const bag=document.createDocumentFragment();
+  for(const [key,label] of entries){const o=el('option',label);o.value=String(key);bag.append(o)}
+  select.replaceChildren(bag);
+  if(entries.some(([key])=>String(key)===String(wanted)))select.value=wanted;
+}
+let data=makeDemo(), current=null, activeTab='service', lastSlice='', plotted=[], importToken=0;
+const unit=metric=>metric==='req'?'요청/초':'출력 토큰/초';
+const shortCfg=r=>[r.seq,r.budget,r.len].map(x=>f(x,0)).join(' / ');
+function announce(msg){$('notice').textContent=msg;$('notice').hidden=!msg}
+function fillScopes(reset=false){
+  const groups=new Map();for(const r of data)groups.set(workKey(r),workLabel(r));
+  pick('workload',[...groups],reset?[...groups.keys()][0]:undefined);
+  const work=data.filter(r=>workKey(r)===$('workload').value),envs=[...new Set(work.map(r=>r.environment))];
+  pick('env',envs.map(s=>[s,s]),reset?envs[0]:undefined);
+  const cs=[...new Set(work.filter(r=>r.environment===$('env').value).map(r=>r.concurrency))].sort((a,b)=>b-a);
+  pick('conc',cs.map(x=>[x,f(x,0)]),reset?cs[0]:undefined);
+  const demo=data[0].data_kind==='demo';$('source').textContent=demo?'예시 데이터':'가져온 측정값';$('source').classList.toggle('real',!demo);
+  render();
+}
+function getPolicy(){
+  const limit=id=>{const i=$(id);return i.validity.badInput||(!i.validity.valid&&i.value!=='')?NaN:i.value===''?Infinity:Number(i.value)};
+  return {ttft:limit('limT'),itl:limit('limI'),metric:$('metric').value,parity:$('parity').checked};
+}
+function stat(name,value,detail){
+  const d=el('div',undefined,'stat');d.append(el('span',name),el('strong',value),el('small',detail));return d;
+}
+function table(headers,rows){
+  const wrap=el('div',undefined,'tablewrap'),t=el('table'),head=el('thead'),hrow=el('tr'),body=el('tbody');
+  headers.forEach(s=>hrow.append(el('th',s)));head.append(hrow);
+  rows.forEach(items=>{const tr=el('tr');items.forEach(v=>tr.append(el('td',v)));body.append(tr)});
+  t.append(head,body);wrap.append(t);return wrap;
+}
+function render(){
+  const policy=getPolicy(), rows=data.filter(r=>workKey(r)===$('workload').value&&r.environment===$('env').value&&r.concurrency===Number($('conc').value));
+  const valid=!Number.isNaN(policy.ttft)&&!Number.isNaN(policy.itl);
+  const selection=selectRuns(aggregate(rows),policy);
+  if(!valid){selection.best=null;selection.eligible=[];selection.all.forEach(r=>r.reasons=['지연 목표 입력 오류'])}
+  current={...selection,policy,rows,valid};
+  const {best,eligible,all}=selection,u=unit(policy.metric);
+  $('summary').replaceChildren(
+    stat('추천 설정 · 시퀀스 / 토큰',best?f(best.seq)+' / '+f(best.budget):'추천 없음',best?'max_model_len '+f(best.len):valid?'조건 충족 설정 0개':'지연 목표를 양수로 입력하세요'),
+    stat('추천 설정의 처리량',best?f(best[policy.metric]):'—',u+' · 반복 중앙값'),
+    stat('조건을 충족한 설정',eligible.length+' / '+all.length,'동시 요청 '+f(Number($('conc').value))+'건')
+  );
+  const headers=['판정','seqs','배치 토큰','문맥 상한','실행 수','p95 TTFT (ms)','p95 ITL (ms)','출력 토큰/초','요청/초','정합성'];
+  const hr=el('tr');headers.forEach(s=>hr.append(el('th',s)));$('resultHead').replaceChildren(hr);
+  const body=document.createDocumentFragment();
+  for(const r of all){const tr=el('tr');if(best===r)tr.className='recommend';
+    const tag=r.reasons.length?r.reasons.join(' · '):r===best?'★ 추천':'충족';
+    const td=el('td',tag,r.reasons.length?'no':'tag');tr.append(td);
+    [f(r.seq),f(r.budget),f(r.len),r.n,f(r.ttft),f(r.itl),f(r.out),f(r.req,2),{pass:'통과',fail:'실패',unknown:'미확인'}[r.quality]].forEach(v=>tr.append(el('td',v)));body.append(tr);
+  }
+  $('resultBody').replaceChildren(body);$('counts').textContent=all.length+'개 설정 · '+rows.length+'회 실행';
+  const slice=JSON.stringify([$('workload').value,$('env').value,$('conc').value]);
+  const anchorList=[['best','자동 · 추천 설정'],...all.map(r=>[r.key,shortCfg(r)])];
+  pick('anchor',anchorList,slice===lastSlice?undefined:'best');lastSlice=slice;
+  $('export').disabled=!valid||!rows.length;
+  renderSensitivity();if(activeTab==='service')scatter();
+}
+function loadSweep(base){
+  const panel=$('loadsweep');panel.replaceChildren();
+  if(!base){panel.append(el('p','비교 기준에서 서버 설정을 고르면 부하별 결과를 확인할 수 있습니다.','micro'));return}
+  const {policy,valid}=current,metric=policy.metric,group=$('workload').value,env=$('env').value;
+  const buckets=new Map();
+  for(const row of data){
+    if(workKey(row)!==group||row.environment!==env||configKey(row)!==base.key)continue;
+    if(!buckets.has(row.concurrency))buckets.set(row.concurrency,[]);buckets.get(row.concurrency).push(row);
+  }
+  const seq=[...buckets.entries()].sort(([a],[b])=>a-b).map(([c,rr])=>{
+    const config=aggregate(rr)[0];return {c,...config,reasons:valid?reasons(config,policy):['지연 목표 입력 오류']};
+  });
+  const feasible=seq.filter(r=>r.reasons.length===0),last=feasible[feasible.length-1];
+  panel.append(table(['동시 요청',unit(metric),'이전 부하 대비','p95 TTFT (ms)','p95 ITL (ms)','판정'],seq.map((r,i)=>{
+    const a=i&&seq[i-1],usable=a&&!a.errors&&!r.errors&&a[metric]>0&&r[metric]>0;
+    const pct=usable?(r[metric]/a[metric]-1)*100:null;
+    return [f(r.c),f(r[metric],2),pct===null?'—':(pct>0?'+':'')+f(pct)+'%',f(r.ttft),f(r.itl),r.reasons.join(' · ')||'충족'];
+  })));
+  let note='현재 목표를 충족한 동시 요청 구간이 없습니다.';
+  if(last){
+    note='측정한 부하 중 지연·정합성 등 선택 조건을 만족한 가장 큰 동시 요청 수는 '+f(last.c)+'건입니다.';
+    const upper=seq.find(r=>r.c>last.c&&r.reasons.length);
+    if(upper&&upper.c-last.c>1){const mid=Math.round(Math.sqrt(last.c)*Math.sqrt(upper.c));if(mid>last.c&&mid<upper.c)note+=' 다음 측정 후보는 통과 '+f(last.c)+'건과 제외 '+f(upper.c)+'건 사이의 '+f(mid)+'건입니다.'}
+  }
+  panel.append(el('p',seq.length===1?'이 서버 설정은 동시 요청 수 한 구간에서만 측정했습니다. 같은 설정으로 부하를 바꾼 결과를 추가하세요.':note,'micro'));
+}
+
+
+function renderSensitivity(){
+  const {best,all,policy}=current,base=$('anchor').value==='best'?best:all.find(r=>r.key===$('anchor').value);
+  const box=$('sensitivity');box.replaceChildren();loadSweep(base);
+  if(!base){box.append(el('p','비교 기준에서 측정된 설정을 직접 선택하세요.','micro'));return}
+  const key=$('factor').value, fixed=Object.keys(params).filter(k=>k!==key),metric=policy.metric;
+  const family=all.filter(r=>fixed.every(k=>r[k]===base[k])).sort((a,b)=>a[key]-b[key]);
+  box.append(el('p',fixed.map(k=>params[k]+' = '+f(base[k])).join('  ·  '),'micro'));
+  const diff=(x,y)=>{if(x===null||y===null||!y)return '—';const v=(x/y-1)*100;return (v>0?'+':'')+f(v)+'%'};
+  box.append(table([params[key],unit(metric),'기준 대비','TTFT (ms)','ITL (ms)','판정'],family.map(r=>[
+    f(r[key])+(r===base?' (기준)':''),f(r[metric],2),r.errors||base.errors?'—':diff(r[metric],base[metric]),f(r.ttft),f(r.itl),r.reasons.join(' · ')||'충족'
+  ])));
+  let note='';
+  if(base.errors){note='기준 설정에 실패한 실행이 있습니다. 정상 실행을 기준으로 선택하면 처리량 변화를 계산합니다.'}
+  else if(family.length===1){note='한 변수만 바꾼 측정 쌍이 없습니다. 나머지 두 상한을 고정하고 '+params[key]+'만 바꿔 재측정하세요.'}
+  else{
+    const next=family.find(r=>r[key]>base[key]);
+    if(next&&!next.errors&&next[metric]!==null&&base[metric]!==null){
+      note=params[key]+'를 '+f(base[key])+'에서 '+f(next[key])+'로 올린 측정에서 처리량은 '+diff(next[metric],base[metric])+', ITL은 '+diff(next.itl,base.itl)+' 변했습니다.';
+      const middle=Math.round(Math.sqrt(base[key])*Math.sqrt(next[key]));
+      if(middle>base[key]&&middle<next[key])note+=' 두 지점 사이의 추가 측정 후보는 '+f(middle)+'입니다. 백엔드가 지원하는 인접 값으로 조정하세요.';
+    } else if(next&&next.errors){note='더 큰 값 '+f(next[key])+'에서 실패가 기록됐습니다. 재시도 전에 해당 실행의 OOM·서버 로그를 확인하세요.'}
+    else{note='이 기준값보다 큰 정상 측정 쌍이 없습니다. 표의 작은 값과 비교하거나 인접한 값을 추가 측정하세요.'}
+  }
+  box.append(el('p',note,'subbox'));
+}
+function initCanvas(id){
+  const canvas=$(id),rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return null;
+  const ratio=Math.min(window.devicePixelRatio||1,2),w=rect.width,h=rect.height;
+  canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);
+  const c=canvas.getContext('2d');c.setTransform(ratio,0,0,ratio,0,0);c.font='12px -apple-system, sans-serif';c.lineWidth=1;
+  return {c,w,h,L:w<400?49:65,R:w-17,T:26,B:h-42};
+}
+function stroke(c,x1,y1,x2,y2,color='#dce4ea',width=1,dash=[]){c.save();c.strokeStyle=color;c.lineWidth=width;c.setLineDash(dash);c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();c.restore()}
+function label(c,s,x,y,align='left',color='#52687b'){c.fillStyle=color;c.textAlign=align;c.fillText(s,x,y)}
+function dot(c,x,y,rad,fill){c.beginPath();c.arc(x,y,rad,0,2*Math.PI);c.fillStyle=fill;c.fill()}
+function compact(n){if(n===0)return '0';if(n>=1e6||n<.01)return n.toExponential(0);if(n>=10000)return f(n/1000,1)+'k';return f(n,n<1?3:1)}
+function niceTick(max){
+  const rough=max/4;if(!rough||!Number.isFinite(rough))return 1;
+  const ten=10**Math.floor(Math.log10(rough)),m=rough/ten;
+  return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*ten;
+}
+function scatter(){
+  $('tip').hidden=true;plotted=[];
+  const a=initCanvas('scatter');if(!a||!current)return;
+  const {c,w,h,L,R,T,B}=a,{all,best,policy,valid}=current,axis=$('axis').value,metric=policy.metric;
+  const metricX=r=>axis==='inverse'?1000/r.itl:axis==='itl'?r.itl:r.ttft;
+  const dots=all.filter(r=>!r.errors&&r[metric]!==null&&r.itl!==null&&r.ttft!==null);
+  const rawLimit=axis==='ttft'?policy.ttft:policy.itl,limit=Number.isFinite(rawLimit)?(axis==='inverse'?1000/rawLimit:rawLimit):null;
+  const xname=axis==='inverse'?'1 / p95 ITL (s⁻¹) · 오른쪽이 빠름':(axis==='itl'?'p95 ITL':'p95 TTFT')+' (ms) · 왼쪽이 빠름';
+  label(c,unit(metric),L,14);label(c,xname,(L+R)/2,h-4,'center');
+  if(!dots.length){label(c,'표시할 정상 측정점이 없습니다.',w/2,h/2,'center');$('plotnote').textContent='실패 원인과 처리량 누락 여부를 아래 표에서 확인하세요.';return}
+  let maxX=0,maxY=0;for(const r of dots){maxX=Math.max(maxX,metricX(r));maxY=Math.max(maxY,r[metric])}
+  const sx=niceTick(maxX*1.05),sy=niceTick(maxY*1.06),xEnd=Math.ceil(maxX*1.05/sx)*sx,yEnd=Math.ceil(maxY*1.06/sy)*sy;
+  const px=v=>L+v/xEnd*(R-L),py=v=>B-v/yEnd*(B-T);
+  for(let i=0;i<=Math.round(xEnd/sx);i++){const x=px(i*sx);stroke(c,x,T,x,B,'#edf1f4');label(c,compact(i*sx),x,B+18,'center')}
+  for(let i=0;i<=Math.round(yEnd/sy);i++){const y=py(i*sy);stroke(c,L,y,R,y);label(c,compact(i*sy),L-8,y+4,'right')}
+  if(valid&&limit!==null&&limit<=xEnd)stroke(c,px(limit),T,px(limit),B,'#aa7018',1.5,[5,4]);
+  // 가로축이 역수여도 지연이 짧은 순서에서 처리량이 새로 증가하는 점만 경계에 속한다.
+  const front=dots.filter(r=>!r.reasons.length).sort((a,b)=>(axis==='ttft'?a.ttft-b.ttft:a.itl-b.itl)||b[metric]-a[metric]);
+  let prev=null;for(const r of front){if(prev&&r[metric]<=prev[metric])continue;if(prev)stroke(c,px(metricX(prev)),py(prev[metric]),px(metricX(r)),py(r[metric]),'#148773',2);prev=r}
+  for(const r of [...dots.filter(r=>r!==best).sort((a,b)=>b.reasons.length-a.reasons.length),...(best?[best]:[])]){
+    const x=px(metricX(r)),y=py(r[metric]);if(r===best){dot(c,x,y,9,'#68ceb1');dot(c,x,y,6.5,'#15394b');dot(c,x,y,2,'white')}
+    else{dot(c,x,y,5.4,'white');dot(c,x,y,4.2,r.reasons.length?'#97a7b6':'#118675')}
+    plotted.push({x,y,r});
+  }
+  $('plotnote').textContent=(best?'추천 설정의 p95 TTFT는 '+f(best.ttft)+' ms, p95 ITL은 '+f(best.itl)+' ms입니다.':'조건을 만족한 설정이 없습니다.')+(all.length>dots.length?' 실패·처리량 누락 설정은 표에서 확인하세요.':'')+(limit!==null&&limit>xEnd?' 지연 목표선은 현재 축 범위 밖에 있습니다.':'');
+}
+$('scatter').addEventListener('pointermove',e=>{
+  const rect=e.target.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+  const nearest=plotted.map(p=>({...p,dist:Math.hypot(p.x-x,p.y-y)})).filter(p=>p.dist<14).sort((a,b)=>a.dist-b.dist)[0],t=$('tip');
+  if(!nearest){t.hidden=true;return}const r=nearest.r;
+  t.textContent=shortCfg(r)+'\n'+f(r[current.policy.metric])+' '+unit(current.policy.metric)+' · ITL '+f(r.itl)+' ms\n'+(r.reasons.join(' · ')||'조건 충족');
+  t.hidden=false;t.style.left=Math.max(0,Math.min(x+10,rect.width-t.offsetWidth))+'px';t.style.top=Math.max(0,Math.min(y+8,rect.height-t.offsetHeight))+'px';
+});
+$('scatter').addEventListener('pointerleave',()=>$('tip').hidden=true);
+
+function drawKernel(){
+  const vals=['peak','band','ops','bytes','ms'].map(id=>Number($(id).value)),d=roofCalc(...vals),box=$('kernelResult'),a=initCanvas('roof');
+  box.replaceChildren();if(!a)return;
+  const {c,L,R,T,B,h}=a;label(c,'연산 성능 (TFLOP/s, 로그 축)',L,14);label(c,'연산 집약도 (FLOP/byte, 로그 축)',(L+R)/2,h-4,'center');
+  if(!d){box.append(el('p','모든 입력에 유한한 양수를 입력하세요.','msg'));return}
+  const [peak,band]=vals,{ridge,intensity,actual,ceiling,eff}=d;
+  const lx=Math.log10(intensity),lr=Math.log10(ridge),ly=Math.log10(actual),lp=Math.log10(peak);
+  const xmin=Math.floor(Math.min(lx,lr)-.4),xmax=Math.ceil(Math.max(lx,lr)+.4);
+  const lineAt=x=>Math.min(lp,Math.log10(band)+x);
+  const ymin=Math.floor(Math.min(lineAt(xmin),ly)-.15),ymax=Math.ceil(Math.max(lp,ly)+.15);
+  const px=x=>L+(x-xmin)/(xmax-xmin)*(R-L),py=y=>B-(y-ymin)/(ymax-ymin)*(B-T);
+  const expLabel=e=>Math.abs(e)>3?'10^'+e:compact(10**e);
+  for(let e=xmin;e<=xmax;e+=Math.max(1,Math.ceil((xmax-xmin)/6))){stroke(c,px(e),T,px(e),B,'#e6edf0');label(c,expLabel(e),px(e),B+18,'center')}
+  for(let e=ymin;e<=ymax;e+=Math.max(1,Math.ceil((ymax-ymin)/5))){stroke(c,L,py(e),R,py(e));label(c,expLabel(e),L-8,py(e)+4,'right')}
+  stroke(c,L,py(lineAt(xmin)),px(lr),py(lp),'#138670',2.7);stroke(c,px(lr),py(lp),R,py(lp),'#224459',2.7);
+  stroke(c,px(lx),py(ly),px(lx),py(Math.log10(ceiling)),'#aa7018',1.5,[4,3]);
+  dot(c,px(lr),py(lp),4,'#15394b');dot(c,px(lx),py(ly),7,'#70cfb2');dot(c,px(lx),py(ly),4,'#123849');
+  const reg=Math.abs(lx-lr)<1e-9?'두 상한의 교점':lx<lr?'HBM 대역폭이 상한을 결정하는 구간':'최대 연산 성능이 상한을 결정하는 구간';
+  box.append(el('div',f(actual,3)+' TFLOP/s','rfval'),el('p','측정 성능 · 이론 상한 '+f(ceiling,3)+' TFLOP/s의 '+f(eff)+'%','hint'),
+    el('p','연산 집약도 '+f(intensity,3)+' FLOP/byte · 교점 '+f(ridge,3)+' FLOP/byte · '+reg,'subbox'));
+  if(eff>100.000001)box.append(el('p','측정점이 계산 상한을 넘었습니다. FLOP 집계 방식, HBM 트래픽, 칩 수, 정밀도와 시간 범위를 확인하세요.','msg'));
+}
+const titles={remote:['원격 vLLM 수집','운영 중인 Pod의 상태를 보거나, Pod·VM에서 수집한 벤치마크 결과를 분석합니다.'],service:['vLLM 추론 성능 분석','같은 부하에서 지연 목표를 만족하는 서버 설정을 찾습니다.'],kernel:['커널 Roofline 분석','프로파일러의 연산량·HBM 트래픽·실행 시간으로 커널 성능을 계산합니다.'],guide:['데이터 가이드','실제 GPU·TPU 벤치마크 결과를 준비하고 추천 기준을 확인합니다.']};
+function setTab(key){
+  activeTab=key;for(const name of Object.keys(titles))$(name).hidden=key!==name;
+  document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===key)));
+  [$('title').textContent,$('subtitle').textContent]=titles[key];$('dataActions').hidden=key==='kernel'||key==='remote';
+  if(key==='kernel')drawKernel();if(key==='service')scatter();
+}
+function csvText(headers,rows){
+  // 스프레드시트로 열 때 텍스트 식별자가 수식으로 실행되지 않도록 처리한다.
+  function cell(v){if(v==null)return '';let s=String(v);if(typeof v==='string'&&/^[\s]*[=+@\x2d]/.test(s))s="'"+s;return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+  return '\uFEFF'+[headers,...rows].map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n';
+}
+function saveCSV(name,headers,rows){
+  const url=URL.createObjectURL(new Blob([csvText(headers,rows)],{type:'text/csv;charset=utf-8'})),link=el('a');
+  link.download=name;link.href=url;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function exportAnalysis(){
+  if(!current.valid)return;
+  const {policy,all,best,rows}=current,first=rows[0];
+  const fixed=['data_kind','scenario','model','dtype','environment','input_tokens','output_tokens','concurrency'];
+  const headings=[...fixed,...Object.values(params),'runs','failed_runs','quality','max_run_p95_ttft_ms','max_run_p95_itl_ms','median_output_tok_s','median_req_s','objective','ttft_slo_ms','itl_slo_ms','require_quality_pass','verdict'];
+  const val=v=>Number.isFinite(v)?v:'unbounded';
+  const result=all.map(r=>[...fixed.map(k=>first[k]),r.seq,r.budget,r.len,r.n,r.errors,r.quality,r.ttft,r.itl,r.out,r.req,policy.metric==='out'?'output_tok_s':'req_s',val(policy.ttft),val(policy.itl),policy.parity,r.reasons.join(' · ')||(r===best?'추천':'충족')]);
+  saveCSV('vllm_analysis_'+first.data_kind+'.csv',headings,result);
+}
+async function importFiles(files){
+  if(!files.length)return;const token=++importToken;const all=[];let name='';
+  try{
+    for(const file of files){name=file.name;
+      if(!/\.(json|csv)$/i.test(name))throw Error('CSV 또는 JSON 파일을 선택하세요.');
+      const raw=await file.text(),records=/\.csv$/i.test(name)?csvRead(raw):jsonRead(raw);
+      for(let i=0;i<records.length;i++)all.push(normalize(records[i],i+1,name));
+    }
+    validateSet(all);if(token!==importToken)return;
+    data=all;lastSlice='';fillScopes(true);setTab('service');announce(files.length+'개 파일에서 실행 '+all.length+'건을 불러왔습니다.');
+  }catch(e){if(token!==importToken)return;announce('파일을 적용하지 못했습니다. '+name+'\n'+e.message+'\n기존 분석 데이터는 보존했습니다. 입력 항목은 데이터 가이드에서 확인하세요.')}
+}
+$('cmd').textContent=[
+  'vllm bench serve',
+  '  --model YOUR_MODEL --backend openai --base-url http://localhost:8000',
+  '  --dataset-name random --random-input-len 1024 --random-output-len 500 --ignore-eos',
+  '  --max-concurrency 128 --num-prompts 1024 --num-warmups 16',
+  '  --percentile-metrics ttft,itl --metric-percentiles 95 --save-result',
+  '  --metadata run_id=run-001 scenario=random-fixed-seed0 dtype=BF16',
+  '    environment=YOUR_HWx8-TP8-DP1-VERSION concurrency=128 input_tokens=1024 output_tokens=500',
+  '    max_num_seqs=64 max_num_batched_tokens=1024 max_model_len=8192 quality=unknown'
+].join(' '+String.fromCharCode(92)+'\n');
+$('cmd').after(el('p','quality=unknown은 정합성 미확인입니다. 별도 평가를 통과했을 때 pass를 기록하세요. 성능만 먼저 탐색하려면 정합성 필터를 해제하세요.','micro'));
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{announce('');setTab(b.dataset.tab)}));
+for(const id of ['workload','env','conc'])$(id).addEventListener('change',()=>fillScopes());
+for(const id of ['metric','parity'])$(id).addEventListener('change',render);
+for(const id of ['limI','limT'])$(id).addEventListener('input',render);
+for(const id of ['axis'])$(id).addEventListener('change',scatter);
+for(const id of ['anchor','factor'])$(id).addEventListener('change',renderSensitivity);
+for(const id of ['peak','band','ops','bytes','ms'])$(id).addEventListener('input',drawKernel);
+$('upload').addEventListener('click',()=>$('files').click());$('files').addEventListener('change',e=>{const files=Array.from(e.target.files);e.target.value='';importFiles(files)});
+$('export').addEventListener('click',exportAnalysis);$('template').addEventListener('click',()=>saveCSV('vllm_runs_template.csv',fields,[]));
+$('sampleCSV').addEventListener('click',()=>saveCSV('vllm_runs_demo.csv',fields,makeDemo().map(r=>fields.map(k=>r[k]))));
+$('restore').addEventListener('click',()=>{importToken++;data=makeDemo();lastSlice='';fillScopes(true);setTab('service');announce('예시 데이터를 불러왔습니다.')});
+window.addEventListener('resize',()=>{if(activeTab==='service')scatter();if(activeTab==='kernel')drawKernel()});
+function kubeCommand(){
+  const ns=$('kubeNs').value.trim(), pod=$('kubePod').value.trim(), container=$('kubeContainer').value.trim();
+  const port=Number($('kubePort').value), logsOnly=$('kubeLogsOnly').checked, output=$('kubeCommand');
+  const name=/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
+  $('kubePort').disabled=logsOnly;
+  if(!name.test(ns)||(pod&&!name.test(pod))||(container&&!name.test(container))){
+    output.textContent='네임스페이스·Pod·컨테이너에는 kubectl에 표시되는 이름을 입력하세요.';return;
+  }
+  if(!logsOnly&&(!Number.isInteger(port)||port<1||port>65535)){
+    output.textContent='vLLM 포트는 1~65535 사이의 정수로 입력하세요.';return;
+  }
+  const lines=['kubectl config current-context','kubectl get pods -n '+ns];
+  if(pod){
+    const cmd=['python3 remote.py kube -n',ns,'--pod',pod];
+    if(container)cmd.push('-c',container);
+    if(logsOnly)cmd.push('--logs-only');else if(port!==8000)cmd.push('--port',String(port));
+    lines.push(cmd.join(' ')+' --seconds 30');
+  }else{lines.push('# 위 명령으로 확인한 Pod 이름을 입력하면 수집 명령이 표시됩니다.')}
+  output.textContent=lines.join('\n');
+}
+for(const id of ['kubeNs','kubePod','kubeContainer','kubePort','kubeLogsOnly'])$(id).addEventListener('input',kubeCommand);
+kubeCommand();
+const kubeLabels = {
+  num_requests_waiting:'대기 요청', num_requests_running:'실행 요청',
+  kv_cache_usage_perc:'KV 캐시 사용률', gpu_cache_usage_perc:'GPU KV 캐시 사용률',
+  generation_tokens_total:'생성 토큰', prompt_tokens_total:'입력 토큰',
+  num_preemptions_total:'선점 횟수', prefix_cache_hits_total:'접두사 캐시 적중',
+  prefix_cache_queries_total:'접두사 캐시 조회'
+};
+function renderKube(r){
+  if(r?.kind!=='vllm-kubectl-observation/v1'||!['ok','partial','invalid'].includes(r.status)||
+     !r.target?.pod||!Array.isArray(r.warnings))throw Error('kubectl-summary.json 파일을 선택하세요.');
+  const t=r.target, content=document.createDocumentFragment();
+  const state={ok:'수집 완료',partial:'일부 수집',invalid:'분석 제외'}[r.status];
+  const demo=r.data_kind==='demo'?'예시 · ':'';
+  content.append(el('h3',demo+state+' · '+t.pod),el('p',[t.context,t.namespace,t.container].join(' / ')),
+    el('p',r.start_utc+' ~ '+r.end_utc+' (UTC)','hint'));
+  for(const msg of r.warnings)content.append(el('p',msg,'msg'));
+  if(r.status!=='invalid'&&r.identity_verified){
+    const m=r.metrics, logs=r.logs;
+    if(m){
+      content.append(el('p','메트릭 응답 '+m.ok+'회 성공 · '+m.failed+'회 실패'));
+      const rows=[];
+      for(const [series,v] of Object.entries(m.series)){
+        const match=/^vllm:(\w+)(.*)$/.exec(series);
+        if(!match)continue;
+        const name=match[1],percent=name.endsWith('cache_usage_perc');
+        const display=n=>Number.isFinite(n)?(percent?f(n*100,2)+'%':f(n,2)):'—';
+        const delta=v.observed_delta!=null&&v.samples>=2?display(v.observed_delta):'—';
+        rows.push([kubeLabels[name]||name,match[2]||'—',display(v.first),display(v.max),display(v.last),delta,
+          v.observed_delta==null?'—':v.resets,v.samples]);
+      }
+      if(rows.length)content.append(table(['지표','모델·엔진 라벨','처음','최대','마지막','관측 증가량','리셋','표본'],rows));
+    }
+    if(r.logs_only)content.append(el('p','로그 전용 관측입니다.'));
+    if(logs)content.append(el('p','읽은 로그 '+logs.lines+'줄 · 설정·캐시 등 관련 로그 '+logs.events+'줄 · 메모리 부족(OOM) 문구 '+logs.oom_lines+'줄'));
+    if(m&&Object.keys(m.series).length)content.append(el('p','대기 요청이 끝까지 남았으면 같은 시점의 실행 요청·KV 캐시 추이를 원본에서 확인하세요. KV 80%는 엔진에 예약한 캐시 블록의 80%를 사용했다는 뜻입니다.','hint'));
+  }
+  $('kubeResult').replaceChildren(content);
+}
+$('kubeOpen').addEventListener('click',()=>$('kubeFile').click());
+let kubeImport=0;
+$('kubeFile').addEventListener('change',async e=>{
+  const file=e.target.files[0];e.target.value='';if(!file)return;
+  const token=++kubeImport;
+  try{const r=JSON.parse(await file.text());if(token===kubeImport)renderKube(r)}
+  catch(err){if(token===kubeImport)$('kubeResult').replaceChildren(el('p','파일을 열 수 없습니다. '+err.message,'msg'))}
+});
+function remoteGuide(){const kind=$('rtKind').value,mode=$('rtMode').value,id=$('rtTarget').value.trim(),setting=$('rtSetting').value.trim();$('rtSetting').disabled=mode==='observe';const valid=/^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/;if(!valid.test(id)||(mode!=='observe'&&!valid.test(setting))){$('rtCmd').textContent='ID에는 영문, 숫자, 점, 밑줄, 하이픈을 사용할 수 있습니다.';return}const cmd='python3 remote.py '+mode+' --target '+id+(mode==='observe'?' --seconds 60':' --setting '+setting);$('rtCmd').textContent=cmd+' --plan\n'+cmd;$('rtInfo').textContent=mode==='observe'?'외부 부하가 있는 동안 서버 메트릭만 읽습니다.':(mode==='launch'?'설정마다 전용 원격 장비에서 서버를 기동하고 벤치가 끝나면 종료합니다.':'이미 떠 있는 모델에 실제 벤치마크 요청을 보냅니다.')+(kind==='pod'?' Pod 교체·재시작 여부는 수거할 때 확인합니다.':' SSH 별칭에 설정한 계정으로 측정합니다.');}
+$('rtKind').addEventListener('change',()=>{$('rtTarget').value=$('rtKind').value==='pod'?'ironwood-pod':'h200-vm';remoteGuide()});
+for(const id of ['rtMode','rtTarget','rtSetting'])$(id).addEventListener('input',remoteGuide);
+remoteGuide();
+fillScopes(true);
+</script></body></html>

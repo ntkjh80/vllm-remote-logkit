@@ -1,0 +1,35 @@
+results/
+observations/
+imports/
+configs/*.json
+!configs/*.example.json
+__pycache__/
+*.py[cod]
+.venv/
+.env
+kubeconfig*
+*.pem
+*.key
+*.log
+*.jsonl.gz
+*.ncu-rep
+*.xplane.pb
+.DS_Store
+
+# 로컬 인증·모델·개발 환경
+.env.*
+!.env.example
+.kube/
+.ssh/
+/models/
+*.safetensors
+*.gguf
+*.pt
+*.pth
+.pytest_cache/
+
+# 단독 추출 결과와 Git 배포 파일
+/metrics-summary.json
+/roof.csv
+/*.bundle
+/*.zip

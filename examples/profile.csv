@@ -1,0 +1,2 @@
+operation,time_us,total_flops,total_hbm_bytes
+example-kernel,1000,60000000000,1200000000

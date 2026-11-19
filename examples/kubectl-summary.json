@@ -1,0 +1,101 @@
+{
+  "kind": "vllm-kubectl-observation/v1",
+  "data_kind": "demo",
+  "status": "ok",
+  "target": {
+    "context": "demo-cluster",
+    "namespace": "inference",
+    "pod": "demo-vllm",
+    "container": "vllm",
+    "port": 8000
+  },
+  "start_utc": "2026-01-01T00:00:00.000+00:00",
+  "end_utc": "2026-01-01T00:00:30.000+00:00",
+  "logs_only": false,
+  "seconds": 30,
+  "interval_s": 15,
+  "identity_verified": true,
+  "identity_before": {
+    "pod_uid": "demo-uid",
+    "node": "demo-node",
+    "container_id": "demo-container",
+    "image": "example/vllm:demo",
+    "image_id": "demo-image",
+    "restart_count": 0
+  },
+  "identity_after": {
+    "pod_uid": "demo-uid",
+    "node": "demo-node",
+    "container_id": "demo-container",
+    "image": "example/vllm:demo",
+    "image_id": "demo-image",
+    "restart_count": 0
+  },
+  "metrics": {
+    "ok": 3,
+    "failed": 0,
+    "series": {
+      "vllm:num_requests_waiting{engine=\"0\",model_name=\"demo-model\"}": {
+        "first": 0.0,
+        "last": 0.0,
+        "min": 0.0,
+        "max": 12.0,
+        "samples": 3,
+        "first_utc": "2026-01-01T00:00:00.000+00:00",
+        "last_utc": "2026-01-01T00:00:30.000+00:00",
+        "observed_delta": null,
+        "resets": 0
+      },
+      "vllm:num_requests_running{engine=\"0\",model_name=\"demo-model\"}": {
+        "first": 8.0,
+        "last": 8.0,
+        "min": 8.0,
+        "max": 8.0,
+        "samples": 3,
+        "first_utc": "2026-01-01T00:00:00.000+00:00",
+        "last_utc": "2026-01-01T00:00:30.000+00:00",
+        "observed_delta": null,
+        "resets": 0
+      },
+      "vllm:kv_cache_usage_perc{engine=\"0\",model_name=\"demo-model\"}": {
+        "first": 0.55,
+        "last": 0.68,
+        "min": 0.55,
+        "max": 0.8,
+        "samples": 3,
+        "first_utc": "2026-01-01T00:00:00.000+00:00",
+        "last_utc": "2026-01-01T00:00:30.000+00:00",
+        "observed_delta": null,
+        "resets": 0
+      },
+      "vllm:generation_tokens_total{engine=\"0\",model_name=\"demo-model\"}": {
+        "first": 1000.0,
+        "last": 2000.0,
+        "min": 1000.0,
+        "max": 2000.0,
+        "samples": 3,
+        "first_utc": "2026-01-01T00:00:00.000+00:00",
+        "last_utc": "2026-01-01T00:00:30.000+00:00",
+        "observed_delta": 1000.0,
+        "resets": 0
+      },
+      "vllm:num_preemptions_total{engine=\"0\",model_name=\"demo-model\"}": {
+        "first": 0.0,
+        "last": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "samples": 3,
+        "first_utc": "2026-01-01T00:00:00.000+00:00",
+        "last_utc": "2026-01-01T00:00:30.000+00:00",
+        "observed_delta": 0.0,
+        "resets": 0
+      }
+    }
+  },
+  "logs": {
+    "lines": 20,
+    "events": 2,
+    "oom_lines": 0
+  },
+  "warnings": []
+}
