@@ -1,0 +1,2 @@
+﻿run_id,scenario,model,dtype,environment,input_tokens,output_tokens,concurrency,max_num_seqs,max_num_batched_tokens,max_model_len,status,quality,p95_ttft_ms,p95_itl_ms,output_throughput,request_throughput,data_kind
+8ae8a792486c,mac-smoke-fixed-12-n5,gemma4:e4b@370c2879f176,Q4_K - Medium,llama.cpp local-smoke · arm64 CPU 4T · b11734-f3fb2fcdb,11,12,1,1,64,512,ok,unknown,286.8387080000001,33.61395800000011,18.908173268626957,1.575681105718913,measured

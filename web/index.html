@@ -247,14 +247,18 @@ function render(){
   const valid=!Number.isNaN(policy.ttft)&&!Number.isNaN(policy.itl);
   const selection=selectRuns(aggregate(rows),policy);
   if(!valid){selection.best=null;selection.eligible=[];selection.all.forEach(r=>r.reasons=['지연 목표 입력 오류'])}
-  current={...selection,policy,rows,valid};
+  const localSmoke=rows[0]?.environment.startsWith('llama.cpp local-smoke · ');
+  const knobNames=localSmoke?{seq:'--parallel',budget:'--batch-size',len:'--ctx-size'}:params;
+  pick('factor',Object.entries(knobNames));
+  current={...selection,policy,rows,valid,knobNames,localSmoke};
+  if(activeTab==='service')showServiceTitle();
   const {best,eligible,all}=selection,u=unit(policy.metric);
   $('summary').replaceChildren(
-    stat('추천 설정 · 시퀀스 / 토큰',best?f(best.seq)+' / '+f(best.budget):'추천 없음',best?'max_model_len '+f(best.len):valid?'조건 충족 설정 0개':'지연 목표를 양수로 입력하세요'),
+    stat('추천 설정 · 시퀀스 / 토큰',best?f(best.seq)+' / '+f(best.budget):'추천 없음',best?knobNames.len+' '+f(best.len):valid?'조건 충족 설정 0개':'지연 목표를 양수로 입력하세요'),
     stat('추천 설정의 처리량',best?f(best[policy.metric]):'—',u+' · 반복 중앙값'),
     stat('조건을 충족한 설정',eligible.length+' / '+all.length,'동시 요청 '+f(Number($('conc').value))+'건')
   );
-  const headers=['판정','seqs','배치 토큰','문맥 상한','실행 수','p95 TTFT (ms)','p95 ITL (ms)','출력 토큰/초','요청/초','정합성'];
+  const headers=['판정',localSmoke?'슬롯':'seqs','배치 토큰','문맥 상한','실행 수','p95 TTFT (ms)',localSmoke?'p95 출력 청크 간격 (ms)':'p95 ITL (ms)','출력 토큰/초','요청/초','정합성'];
   const hr=el('tr');headers.forEach(s=>hr.append(el('th',s)));$('resultHead').replaceChildren(hr);
   const body=document.createDocumentFragment();
   for(const r of all){const tr=el('tr');if(best===r)tr.className='recommend';
@@ -298,23 +302,23 @@ function loadSweep(base){
 
 
 function renderSensitivity(){
-  const {best,all,policy}=current,base=$('anchor').value==='best'?best:all.find(r=>r.key===$('anchor').value);
+  const {best,all,policy,knobNames}=current,base=$('anchor').value==='best'?best:all.find(r=>r.key===$('anchor').value);
   const box=$('sensitivity');box.replaceChildren();loadSweep(base);
   if(!base){box.append(el('p','비교 기준에서 측정된 설정을 직접 선택하세요.','micro'));return}
   const key=$('factor').value, fixed=Object.keys(params).filter(k=>k!==key),metric=policy.metric;
   const family=all.filter(r=>fixed.every(k=>r[k]===base[k])).sort((a,b)=>a[key]-b[key]);
-  box.append(el('p',fixed.map(k=>params[k]+' = '+f(base[k])).join('  ·  '),'micro'));
+  box.append(el('p',fixed.map(k=>knobNames[k]+' = '+f(base[k])).join('  ·  '),'micro'));
   const diff=(x,y)=>{if(x===null||y===null||!y)return '—';const v=(x/y-1)*100;return (v>0?'+':'')+f(v)+'%'};
-  box.append(table([params[key],unit(metric),'기준 대비','TTFT (ms)','ITL (ms)','판정'],family.map(r=>[
+  box.append(table([knobNames[key],unit(metric),'기준 대비','TTFT (ms)','ITL (ms)','판정'],family.map(r=>[
     f(r[key])+(r===base?' (기준)':''),f(r[metric],2),r.errors||base.errors?'—':diff(r[metric],base[metric]),f(r.ttft),f(r.itl),r.reasons.join(' · ')||'충족'
   ])));
   let note='';
   if(base.errors){note='기준 설정에 실패한 실행이 있습니다. 정상 실행을 기준으로 선택하면 처리량 변화를 계산합니다.'}
-  else if(family.length===1){note='한 변수만 바꾼 측정 쌍이 없습니다. 나머지 두 상한을 고정하고 '+params[key]+'만 바꿔 재측정하세요.'}
+  else if(family.length===1){note='한 변수만 바꾼 측정 쌍이 없습니다. 나머지 두 상한을 고정하고 '+knobNames[key]+'만 바꿔 재측정하세요.'}
   else{
     const next=family.find(r=>r[key]>base[key]);
     if(next&&!next.errors&&next[metric]!==null&&base[metric]!==null){
-      note=params[key]+'를 '+f(base[key])+'에서 '+f(next[key])+'로 올린 측정에서 처리량은 '+diff(next[metric],base[metric])+', ITL은 '+diff(next.itl,base.itl)+' 변했습니다.';
+      note=knobNames[key]+'를 '+f(base[key])+'에서 '+f(next[key])+'로 올린 측정에서 처리량은 '+diff(next[metric],base[metric])+', ITL은 '+diff(next.itl,base.itl)+' 변했습니다.';
       const middle=Math.round(Math.sqrt(base[key])*Math.sqrt(next[key]));
       if(middle>base[key]&&middle<next[key])note+=' 두 지점 사이의 추가 측정 후보는 '+f(middle)+'입니다. 백엔드가 지원하는 인접 값으로 조정하세요.';
     } else if(next&&next.errors){note='더 큰 값 '+f(next[key])+'에서 실패가 기록됐습니다. 재시도 전에 해당 실행의 OOM·서버 로그를 확인하세요.'}
@@ -396,11 +400,15 @@ function drawKernel(){
   if(eff>100.000001)box.append(el('p','측정점이 계산 상한을 넘었습니다. FLOP 집계 방식, HBM 트래픽, 칩 수, 정밀도와 시간 범위를 확인하세요.','msg'));
 }
 const titles={remote:['원격 vLLM 수집','운영 중인 Pod의 상태를 보거나, Pod·VM에서 수집한 벤치마크 결과를 분석합니다.'],service:['vLLM 추론 성능 분석','같은 부하에서 지연 목표를 만족하는 서버 설정을 찾습니다.'],kernel:['커널 Roofline 분석','프로파일러의 연산량·HBM 트래픽·실행 시간으로 커널 성능을 계산합니다.'],guide:['데이터 가이드','실제 GPU·TPU 벤치마크 결과를 준비하고 추천 기준을 확인합니다.']};
+function showServiceTitle(){
+  [$('title').textContent,$('subtitle').textContent]=current?.localSmoke?
+    ['맥북 로컬 모델 점검','llama.cpp CPU의 실측값입니다. 첫 응답과 이후 출력 청크 사이의 시간을 표시합니다.']:titles.service;
+}
 function setTab(key){
   activeTab=key;for(const name of Object.keys(titles))$(name).hidden=key!==name;
   document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===key)));
   [$('title').textContent,$('subtitle').textContent]=titles[key];$('dataActions').hidden=key==='kernel'||key==='remote';
-  if(key==='kernel')drawKernel();if(key==='service')scatter();
+  if(key==='kernel')drawKernel();if(key==='service'){showServiceTitle();scatter()}
 }
 function csvText(headers,rows){
   // 스프레드시트로 열 때 텍스트 식별자가 수식으로 실행되지 않도록 처리한다.
@@ -415,7 +423,7 @@ function exportAnalysis(){
   if(!current.valid)return;
   const {policy,all,best,rows}=current,first=rows[0];
   const fixed=['data_kind','scenario','model','dtype','environment','input_tokens','output_tokens','concurrency'];
-  const headings=[...fixed,...Object.values(params),'runs','failed_runs','quality','max_run_p95_ttft_ms','max_run_p95_itl_ms','median_output_tok_s','median_req_s','objective','ttft_slo_ms','itl_slo_ms','require_quality_pass','verdict'];
+  const headings=[...fixed,...Object.values(current.knobNames),'runs','failed_runs','quality','max_run_p95_ttft_ms','max_run_p95_itl_ms','median_output_tok_s','median_req_s','objective','ttft_slo_ms','itl_slo_ms','require_quality_pass','verdict'];
   const val=v=>Number.isFinite(v)?v:'unbounded';
   const result=all.map(r=>[...fixed.map(k=>first[k]),r.seq,r.budget,r.len,r.n,r.errors,r.quality,r.ttft,r.itl,r.out,r.req,policy.metric==='out'?'output_tok_s':'req_s',val(policy.ttft),val(policy.itl),policy.parity,r.reasons.join(' · ')||(r===best?'추천':'충족')]);
   saveCSV('vllm_analysis_'+first.data_kind+'.csv',headings,result);

@@ -1,0 +1,115 @@
+{
+  "targets": [
+    {
+      "id": "ironwood-pod",
+      "connection": {
+        "type": "k8s",
+        "context": "REPLACE_CONTEXT",
+        "namespace": "inference",
+        "pod": "REPLACE_POD",
+        "container": "vllm",
+        "python": "python3"
+      },
+      "hardware": "Ironwood v7",
+      "backend": "REPLACE_WITH_TPU_BACKEND",
+      "model_id": "Qwen/Qwen3-8B",
+      "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+      "served_name": "bench-qwen3-8b",
+      "model_path": "/models/Qwen3-8B-b968826",
+      "tokenizer_path": "/models/Qwen3-8B-b968826",
+      "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+      "dtype": "bfloat16",
+      "tp": 4,
+      "dp": 1,
+      "devices": 4,
+      "server_build": "REPLACE_WITH_RUNTIME_VERSION_OR_IMAGE_DIGEST",
+      "quantization": "none",
+      "fixed_options": "REPLACE_WITH_ACTUAL_KV_CACHE_PREFIX_CACHE_COMPILATION_SETTINGS",
+      "server_args": [],
+      "url": "http://127.0.0.1:8000",
+      "interval": 2,
+      "settings": [
+        {
+          "id": "baseline",
+          "max_num_seqs": 16,
+          "max_num_batched_tokens": 2048,
+          "max_model_len": 2048
+        },
+        {
+          "id": "budget4096",
+          "max_num_seqs": 16,
+          "max_num_batched_tokens": 4096,
+          "max_model_len": 2048
+        }
+      ]
+    },
+    {
+      "id": "h200-vm",
+      "connection": {
+        "type": "ssh",
+        "host": "h200-bench",
+        "python": "/opt/vllm/bin/python"
+      },
+      "hardware": "H200",
+      "backend": "CUDA",
+      "model_id": "Qwen/Qwen3-8B",
+      "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+      "served_name": "bench-qwen3-8b",
+      "model_path": "/models/Qwen3-8B-b968826",
+      "tokenizer_path": "/models/Qwen3-8B-b968826",
+      "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+      "dtype": "bfloat16",
+      "tp": 1,
+      "dp": 1,
+      "devices": 1,
+      "server_build": "REPLACE_WITH_RUNTIME_VERSION_OR_IMAGE_DIGEST",
+      "quantization": "none",
+      "fixed_options": "REPLACE_WITH_ACTUAL_KV_CACHE_PREFIX_CACHE_COMPILATION_SETTINGS",
+      "server_args": [],
+      "url": "http://127.0.0.1:8000",
+      "interval": 2,
+      "settings": [
+        {
+          "id": "baseline",
+          "max_num_seqs": 16,
+          "max_num_batched_tokens": 2048,
+          "max_model_len": 2048
+        },
+        {
+          "id": "budget4096",
+          "max_num_seqs": 16,
+          "max_num_batched_tokens": 4096,
+          "max_model_len": 2048
+        }
+      ],
+      "vllm_bin": "/opt/vllm/bin/vllm"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "first-run",
+      "input_tokens": 64,
+      "output_tokens": 16,
+      "num_prompts": 8,
+      "concurrency": [
+        1
+      ],
+      "repeats": 1,
+      "warmup_prompts": 2,
+      "seed": 7
+    },
+    {
+      "id": "compare",
+      "input_tokens": 512,
+      "output_tokens": 128,
+      "num_prompts": 64,
+      "concurrency": [
+        1,
+        8
+      ],
+      "repeats": 2,
+      "warmup_prompts": 8,
+      "seed": 7
+    }
+  ]
+}
